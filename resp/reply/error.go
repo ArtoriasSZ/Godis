@@ -1,16 +1,16 @@
 package reply
 
-type UnknowErrorReply struct {
+type UnknownErrorReply struct {
 }
 
-var unknowErrorReply = []byte("-Err unknown\r\n")
+var unknownErrorReply = []byte("-Err unknown" + CRLF)
 
-func (u UnknowErrorReply) Error() string {
+func (u UnknownErrorReply) Error() string {
 	return "Err unknown"
 }
 
-func (u UnknowErrorReply) ToBytes() []byte {
-	return unknowErrorReply
+func (u UnknownErrorReply) ToBytes() ([]byte, error) {
+	return unknownErrorReply, nil
 }
 
 type ArgNumErrReply struct {
@@ -22,8 +22,8 @@ func (r *ArgNumErrReply) Error() string {
 
 }
 
-func (r *ArgNumErrReply) ToBytes() []byte {
-	return []byte("-ERR wrong number of arguments for '" + r.cmd + "' command\r\n")
+func (r *ArgNumErrReply) ToBytes() ([]byte, error) {
+	return []byte("-ERR wrong number of arguments for '" + r.cmd + "' command" + CRLF), nil
 }
 
 func NewArgNumErrReply(cmd string) *ArgNumErrReply {
@@ -33,7 +33,7 @@ func NewArgNumErrReply(cmd string) *ArgNumErrReply {
 // SyntaxErrReply represents meeting unexpected arguments
 type SyntaxErrReply struct{}
 
-var syntaxErrBytes = []byte("-Err syntax error\r\n")
+var syntaxErrBytes = []byte("-Err syntax error" + CRLF)
 var theSyntaxErrReply = &SyntaxErrReply{}
 
 // NewSyntaxErrReply creates syntax error
@@ -42,8 +42,8 @@ func NewSyntaxErrReply() *SyntaxErrReply {
 }
 
 // ToBytes marshals redis.Reply
-func (r *SyntaxErrReply) ToBytes() []byte {
-	return syntaxErrBytes
+func (r *SyntaxErrReply) ToBytes() ([]byte, error) {
+	return syntaxErrBytes, nil
 }
 
 func (r *SyntaxErrReply) Error() string {
@@ -53,11 +53,11 @@ func (r *SyntaxErrReply) Error() string {
 // WrongTypeErrReply represents operation against a key holding the wrong kind of value
 type WrongTypeErrReply struct{}
 
-var wrongTypeErrBytes = []byte("-WRONGTYPE Operation against a key holding the wrong kind of value\r\n")
+var wrongTypeErrBytes = []byte("-WRONGTYPE Operation against a key holding the wrong kind of value" + CRLF)
 
 // ToBytes marshals redis.Reply
-func (r *WrongTypeErrReply) ToBytes() []byte {
-	return wrongTypeErrBytes
+func (r *WrongTypeErrReply) ToBytes() ([]byte, error) {
+	return wrongTypeErrBytes, nil
 }
 
 func (r *WrongTypeErrReply) Error() string {
@@ -72,10 +72,10 @@ type ProtocolErrReply struct {
 }
 
 // ToBytes marshals redis.Reply
-func (r *ProtocolErrReply) ToBytes() []byte {
-	return []byte("-ERR Protocol error: '" + r.Msg + "'\r\n")
+func (r *ProtocolErrReply) ToBytes() ([]byte, error) {
+	return []byte("-ERR Protocol error: " + r.Msg + CRLF), nil
 }
 
 func (r *ProtocolErrReply) Error() string {
-	return "ERR Protocol error: '" + r.Msg
+	return "ERR Protocol error: CRLF" + r.Msg
 }

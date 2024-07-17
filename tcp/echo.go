@@ -18,8 +18,14 @@ type EchoClient struct {
 }
 
 func (echoClient *EchoClient) Close() error {
-	echoClient.Waiting.WaitWithTimeout(10 * time.Second)
-	return echoClient.Coon.Close()
+	timeout := echoClient.Waiting.WaitWithTimeout(10 * time.Second)
+	if timeout == true {
+		logger.Warn("echo client close timeout")
+		return echoClient.Coon.Close()
+	} else {
+		return echoClient.Coon.Close()
+	}
+
 }
 
 type EchoHandler struct {

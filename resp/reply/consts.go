@@ -1,40 +1,40 @@
 package reply
 
 // pong回复
-type pongReply struct {
+type PongReply struct {
 }
 
-var pongBytes = []byte("+PONG\r\n")
+var pongBytes = []byte("+PONG" + CRLF)
 
-func (p pongReply) ToBytes() []byte {
-	return pongBytes
+func (p PongReply) ToBytes() ([]byte, error) {
+	return pongBytes, nil
 }
 
-func NewPongReply() *pongReply {
-	return &pongReply{}
+func NewPongReply() *PongReply {
+	return &PongReply{}
 }
 
 // ok回复
-type okReply struct {
+type OkReply struct {
 }
 
-var okBytes = []byte("+OK\r\n")
+var okBytes = []byte("+OK" + CRLF)
 
-func (p okReply) ToBytes() []byte {
-	return okBytes
+func (p OkReply) ToBytes() ([]byte, error) {
+	return okBytes, nil
 }
-func NewOkReply() *okReply {
-	return &okReply{}
+func NewOkReply() *OkReply {
+	return &OkReply{}
 }
 
 // 空字符串回复
 type NullBulkReply struct {
 }
 
-var nullBulkBytes = []byte("$-1\r\n")
+var nullBulkBytes = []byte("$-1" + CRLF)
 
-func (p NullBulkReply) ToBytes() []byte {
-	return nullBulkBytes
+func (p NullBulkReply) ToBytes() ([]byte, error) {
+	return nullBulkBytes, nil
 }
 func NewNullBulkReply() *NullBulkReply {
 	return &NullBulkReply{}
@@ -44,10 +44,10 @@ func NewNullBulkReply() *NullBulkReply {
 type EmptyMultiBulkReply struct {
 }
 
-var emptyMultBulkReply = []byte("*0\r\n")
+var emptyMultiBulkReply = []byte("*0" + CRLF)
 
-func (p EmptyMultiBulkReply) ToBytes() []byte {
-	return emptyMultBulkReply
+func (p EmptyMultiBulkReply) ToBytes() ([]byte, error) {
+	return emptyMultiBulkReply, nil
 }
 
 func NewEmptyMultiBulkReply() *EmptyMultiBulkReply {
@@ -61,8 +61,8 @@ type NoReply struct {
 
 var noReply = []byte("")
 
-func (p NoReply) ToBytes() []byte {
-	return noReply
+func (p NoReply) ToBytes() ([]byte, error) {
+	return noReply, nil
 }
 func NewNoReply() *NoReply {
 	return &NoReply{}
