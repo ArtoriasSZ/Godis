@@ -5,7 +5,11 @@ import (
 	"net"
 )
 
+// HandleFunc represents application handler function
+type HandleFunc func(ctx context.Context, conn net.Conn)
+
+// Handler represents application handler over tcp
 type Handler interface {
-	Handler(ctx context.Context, conn net.Conn)
+	Handle(ctx context.Context, conn net.Conn)
 	Close() error
 }

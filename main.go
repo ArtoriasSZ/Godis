@@ -1,59 +1,48 @@
 package main
 
 import (
-	"Godis/config"
-	"Godis/lib/logger"
-	"Godis/resp/handler"
-	"Godis/tcp"
 	"fmt"
-	"io"
+	"godis/config"
+	"godis/lib/logger"
+	"godis/resp/handler"
+	"godis/tcp"
 	"os"
 )
 
-// 配置文件
-const configFile = "redis.conf"
+const configFile string = "redis.conf"
 
-// 默认配置
 var defaultProperties = &config.ServerProperties{
 	Bind: "0.0.0.0",
 	Port: 6379,
 }
 
-// 配置文件是否存在
-func fileExist(fileName string) bool {
-	info, err := os.Stat(fileName)
+func fileExists(filename string) bool {
+	info, err := os.Stat(filename)
 	return err == nil && !info.IsDir()
 }
 
-// MockReader implements io.Reader for testing purposes.
-type MockReader struct {
-	data []byte
-}
-
-func (r *MockReader) Read(p []byte) (n int, err error) {
-	copy(p, r.data)
-	return len(r.data), io.EOF
-}
 func main() {
-	//goland:noinspection SpellCheckingInspection
 	logger.Setup(&logger.Settings{
 		Path:       "logs",
-		Name:       "Godis",
+		Name:       "godis",
 		Ext:        "log",
-		TimeFormat: "2003-06-16",
+		TimeFormat: "2006-01-02",
 	})
-	if fileExist(configFile) {
+
+	if fileExists(configFile) {
 		config.SetupConfig(configFile)
 	} else {
 		config.Properties = defaultProperties
 	}
-	err := tcp.ListenAndServeWithSystemSignal(
+
+	err := tcp.ListenAndServeWithSignal(
 		&tcp.Config{
-			Address: fmt.Sprintf("%s:%d", config.Properties.Bind, config.Properties.Port),
-		}, handler.NewRespHandler(),
-	)
+			Address: fmt.Sprintf("%s:%d",
+				config.Properties.Bind,
+				config.Properties.Port),
+		},
+		handler.MakeHandler())
 	if err != nil {
 		logger.Error(err)
 	}
-
 }

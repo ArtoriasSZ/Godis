@@ -1,69 +1,63 @@
 package reply
 
-// pong回复
-type PongReply struct {
+// PongReply is +PONG
+type PongReply struct{}
+
+var pongBytes = []byte("+PONG\r\n")
+
+// ToBytes marshal redis.Reply
+func (r *PongReply) ToBytes() []byte {
+	return pongBytes
 }
 
-var pongBytes = []byte("+PONG" + CRLF)
+// OkReply is +OK
+type OkReply struct{}
 
-func (p PongReply) ToBytes() ([]byte, error) {
-	return pongBytes, nil
+var okBytes = []byte("+OK\r\n")
+
+// ToBytes marshal redis.Reply
+func (r *OkReply) ToBytes() []byte {
+	return okBytes
 }
 
-func NewPongReply() *PongReply {
-	return &PongReply{}
+var theOkReply = new(OkReply)
+
+// MakeOkReply returns a ok reply
+func MakeOkReply() *OkReply {
+	return theOkReply
 }
 
-// ok回复
-type OkReply struct {
+var nullBulkBytes = []byte("$-1\r\n")
+
+// NullBulkReply is empty string
+type NullBulkReply struct{}
+
+// ToBytes marshal redis.Reply
+func (r *NullBulkReply) ToBytes() []byte {
+	return nullBulkBytes
 }
 
-var okBytes = []byte("+OK" + CRLF)
-
-func (p OkReply) ToBytes() ([]byte, error) {
-	return okBytes, nil
-}
-func NewOkReply() *OkReply {
-	return &OkReply{}
-}
-
-// 空字符串回复
-type NullBulkReply struct {
-}
-
-var nullBulkBytes = []byte("$-1" + CRLF)
-
-func (p NullBulkReply) ToBytes() ([]byte, error) {
-	return nullBulkBytes, nil
-}
-func NewNullBulkReply() *NullBulkReply {
+// MakeNullBulkReply creates a new NullBulkReply
+func MakeNullBulkReply() *NullBulkReply {
 	return &NullBulkReply{}
 }
 
-// 空数组
-type EmptyMultiBulkReply struct {
+var emptyMultiBulkBytes = []byte("*0\r\n")
+
+// EmptyMultiBulkReply is a empty list
+type EmptyMultiBulkReply struct{}
+
+// ToBytes marshal redis.Reply
+func (r *EmptyMultiBulkReply) ToBytes() []byte {
+	return emptyMultiBulkBytes
 }
 
-var emptyMultiBulkReply = []byte("*0" + CRLF)
+// NoReply respond nothing, for commands like subscribe
+type NoReply struct{}
 
-func (p EmptyMultiBulkReply) ToBytes() ([]byte, error) {
-	return emptyMultiBulkReply, nil
-}
+var noBytes = []byte("")
 
-func NewEmptyMultiBulkReply() *EmptyMultiBulkReply {
-	return &EmptyMultiBulkReply{}
-}
-
-// 空回复
-
-type NoReply struct {
-}
-
-var noReply = []byte("")
-
-func (p NoReply) ToBytes() ([]byte, error) {
-	return noReply, nil
-}
-func NewNoReply() *NoReply {
-	return &NoReply{}
+// ToBytes marshal redis.Reply
+func (r *NoReply) ToBytes() []byte {
+	return noBytes
 }

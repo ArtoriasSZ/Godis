@@ -1,103 +1,117 @@
 package handler
 
+/*
+ * A tcp.RespHandler implements redis protocol
+ */
+
 import (
-	"Godis/database"
-	databaseface "Godis/interface/database"
-	"Godis/lib/logger"
-	"Godis/lib/sync/atomic"
-	"Godis/resp/connection"
-	"Godis/resp/parser"
-	"Godis/resp/reply"
 	"context"
-	"errors"
+	"godis/cluster"
+	"godis/config"
+	"godis/database"
+	databaseface "godis/interface/database"
+	"godis/lib/logger"
+	"godis/lib/sync/atomic"
+	"godis/resp/connection"
+	"godis/resp/parser"
+	"godis/resp/reply"
 	"io"
 	"net"
 	"strings"
 	"sync"
 )
 
+var (
+	unknownErrReplyBytes = []byte("-ERR unknown\r\n")
+)
+
+// RespHandler implements tcp.Handler and serves as a redis handler
 type RespHandler struct {
-	activeConn sync.Map
+	activeConn sync.Map // *client -> placeholder
 	db         databaseface.Database
-	closing    atomic.Boolean
+	closing    atomic.Boolean // refusing new client and new request
 }
 
-func NewRespHandler() *RespHandler {
-	var db = database.NewEchodatabase()
-	//todo: 实现Database
+// MakeHandler creates a RespHandler instance
+func MakeHandler() *RespHandler {
+	var db databaseface.Database
+	if config.Properties.Self != "" &&
+		len(config.Properties.Peers) > 0 {
+		db = cluster.MakeClusterDatabase()
+	} else {
+		db = database.NewStandaloneDatabase()
+	}
+
 	return &RespHandler{
 		db: db,
 	}
-
 }
 
-func (r *RespHandler) closeClientConnection(client *connection.ClientConnection) {
-	client.Close()
-	r.db.AfterClientClose()
-	r.activeConn.Delete(client)
+func (h *RespHandler) closeClient(client *connection.Connection) {
+	_ = client.Close()
+	h.db.AfterClientClose(client)
+	h.activeConn.Delete(client)
 }
 
-func (r *RespHandler) Handler(ctx context.Context, conn net.Conn) {
-	if r.closing.Get() {
+// Handle receives and executes redis commands
+func (h *RespHandler) Handle(ctx context.Context, conn net.Conn) {
+	if h.closing.Get() {
+		// closing handler refuse new connection
 		_ = conn.Close()
 	}
-	client := connection.NewClientConnection(conn)
-	r.activeConn.Store(client, struct{}{})
+
+	client := connection.NewConn(conn)
+	h.activeConn.Store(client, 1)
+
 	ch := parser.ParseStream(conn)
-	for payLoad := range ch {
-		// error
-		if payLoad.Err != nil {
-			if payLoad.Err == io.EOF ||
-				errors.Is(payLoad.Err, io.ErrUnexpectedEOF) ||
-				strings.Contains(payLoad.Err.Error(), "use of closed network connection") {
-				r.closeClientConnection(client)
-				logger.Info("1client closed the connection:" + client.RemoteAddr().String())
+	for payload := range ch {
+		if payload.Err != nil {
+			if payload.Err == io.EOF ||
+				payload.Err == io.ErrUnexpectedEOF ||
+				strings.Contains(payload.Err.Error(), "use of closed network connection") {
+				// connection closed
+				h.closeClient(client)
+				logger.Info("connection closed: " + client.RemoteAddr().String())
 				return
 			}
-			// 协议错误
-			errReply := reply.NewErrReply(payLoad.Err.Error())
-			errReplyBytes, _ := errReply.ToBytes()
-			err := client.Writer(errReplyBytes)
+			// protocol err
+			errReply := reply.MakeErrReply(payload.Err.Error())
+			err := client.Write(errReply.ToBytes())
 			if err != nil {
-				logger.Info("2client closed the connection:" + client.RemoteAddr().String())
-				r.closeClientConnection(client)
+				h.closeClient(client)
+				logger.Info("connection closed: " + client.RemoteAddr().String())
 				return
 			}
 			continue
 		}
-		// exec
-		if payLoad.Date == nil {
+		if payload.Data == nil {
+			logger.Error("empty payload")
 			continue
 		}
-		multiBulkReply, ok := payLoad.Date.(*reply.MultiBulkReply)
+		r, ok := payload.Data.(*reply.MultiBulkReply)
 		if !ok {
-			logger.Error("protocol error: expect multi bulk reply")
+			logger.Error("require multi bulk reply")
 			continue
 		}
-		result := r.db.Exec(client, multiBulkReply.Args)
+		result := h.db.Exec(client, r.Args)
 		if result != nil {
-			// 多行的需要处理缓冲区溢出的错误了
-			bytes, err := result.ToBytes()
-			if err != nil {
-				logger.Error("encode reply error:" + err.Error())
-			}
-			_ = client.Writer(bytes)
+			_ = client.Write(result.ToBytes())
 		} else {
-			// 常量及错误类型无需处理error
-			bytes, _ := reply.UnknownErrorReply{}.ToBytes()
-			_ = client.Writer(bytes)
+			_ = client.Write(unknownErrReplyBytes)
 		}
 	}
 }
 
-func (r *RespHandler) Close() error {
-	logger.Info("handler shut down")
-	r.closing.Set(true)
-	r.activeConn.Range(func(key, value interface{}) bool {
-		clientConnection := key.(*connection.ClientConnection)
-		clientConnection.Close()
+// Close stops handler
+func (h *RespHandler) Close() error {
+	logger.Info("handler shutting down...")
+	h.closing.Set(true)
+	// TODO: concurrent wait
+	h.activeConn.Range(func(key interface{}, val interface{}) bool {
+		client := key.(*connection.Connection)
+		_ = client.Close()
 		return true
 	})
-	r.db.Close()
+	h.db.Close()
 	return nil
 }

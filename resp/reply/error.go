@@ -1,5 +1,6 @@
 package reply
 
+/*
 type UnknownErrorReply struct {
 }
 
@@ -79,3 +80,4 @@ func (r *ProtocolErrReply) ToBytes() ([]byte, error) {
 func (r *ProtocolErrReply) Error() string {
 	return "ERR Protocol error: CRLF" + r.Msg
 }
+*/

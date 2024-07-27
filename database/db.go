@@ -1,79 +1,95 @@
+// Package database is a memory database with redis compatible interface
 package database
 
 import (
-	"Godis/datastruct/dict"
-	"Godis/interface/database"
-	"Godis/interface/resp"
-	"Godis/resp/reply"
-	"fmt"
+	"godis/datastruct/dict"
+	"godis/interface/database"
+	"godis/interface/resp"
+	"godis/resp/reply"
 	"strings"
 )
 
-type CmdLine = [][]byte
-
+// DB stores data and execute user's commands
 type DB struct {
 	index int
-	data  dict.Dict
+	// key -> DataEntity
+	data   dict.Dict
+	addAof func(CmdLine)
 }
 
+// ExecFunc is interface for command executor
+// args don't include cmd line
 type ExecFunc func(db *DB, args [][]byte) resp.Reply
 
-func NewDB() *DB {
+// CmdLine is alias for [][]byte, represents a command line
+type CmdLine = [][]byte
+
+// makeDB create DB instance
+func makeDB() *DB {
 	db := &DB{
-		index: 0,
-		data:  dict.NewSyncDict(),
+		data:   dict.MakeSyncDict(),
+		addAof: func(line CmdLine) {},
 	}
 	return db
 }
 
-func (db *DB) Exec(c resp.Connection, cmdLine CmdLine) resp.Reply {
+// Exec executes command within one database
+func (db *DB) Exec(c resp.Connection, cmdLine [][]byte) resp.Reply {
+
 	cmdName := strings.ToLower(string(cmdLine[0]))
-	cmdFunc, ok := cmdTable[cmdName]
+	cmd, ok := cmdTable[cmdName]
 	if !ok {
-		return reply.NewErrReply(fmt.Sprintf("ERR unknown command '%s'", cmdName))
+		return reply.MakeErrReply("ERR unknown command '" + cmdName + "'")
 	}
-	// 校验参数个数
-	if !validateArity(cmdFunc.arity, cmdLine) {
-		return reply.NewArgNumErrReply(cmdName)
+	if !validateArity(cmd.arity, cmdLine) {
+		return reply.MakeArgNumErrReply(cmdName)
 	}
-	fun := cmdFunc.executor
+	fun := cmd.executor
 	return fun(db, cmdLine[1:])
 }
 
-// Ser key var -> arity = 3
-// Exists k1 k2... -> arity = -2(>=2)
 func validateArity(arity int, cmdArgs [][]byte) bool {
-	arityNum := len(cmdArgs)
-	// todo: 不知道是否要减一
+	argNum := len(cmdArgs)
 	if arity >= 0 {
-		return arityNum == arity
+		return argNum == arity
 	}
-	return arityNum >= -arity
+	return argNum >= -arity
 }
 
+/* ---- data Access ----- */
+
+// GetEntity returns DataEntity bind to given key
 func (db *DB) GetEntity(key string) (*database.DataEntity, bool) {
-	row, ok := db.data.Get(key)
+
+	raw, ok := db.data.Get(key)
 	if !ok {
 		return nil, false
 	}
-	return row.(*database.DataEntity), true
+	entity, _ := raw.(*database.DataEntity)
+	return entity, true
 }
 
-func (db *DB) PutEntity(key string, value *database.DataEntity) int {
-	return db.data.Put(key, value)
+// PutEntity a DataEntity into DB
+func (db *DB) PutEntity(key string, entity *database.DataEntity) int {
+	return db.data.Put(key, entity)
 }
 
-func (db *DB) PutEntityIfExists(key string, value *database.DataEntity) int {
-	return db.data.PutIfExists(key, value)
-}
-func (db *DB) PutEntityIfAbsent(key string, value *database.DataEntity) int {
-	return db.data.PutIfAbsent(key, value)
+// PutIfExists edit an existing DataEntity
+func (db *DB) PutIfExists(key string, entity *database.DataEntity) int {
+	return db.data.PutIfExists(key, entity)
 }
 
+// PutIfAbsent insert an DataEntity only if the key not exists
+func (db *DB) PutIfAbsent(key string, entity *database.DataEntity) int {
+	return db.data.PutIfAbsent(key, entity)
+}
+
+// Remove the given key from db
 func (db *DB) Remove(key string) {
 	db.data.Remove(key)
 }
 
+// Removes the given keys from db
 func (db *DB) Removes(keys ...string) (deleted int) {
 	deleted = 0
 	for _, key := range keys {
@@ -86,6 +102,7 @@ func (db *DB) Removes(keys ...string) (deleted int) {
 	return deleted
 }
 
+// Flush clean database
 func (db *DB) Flush() {
 	db.data.Clear()
 }

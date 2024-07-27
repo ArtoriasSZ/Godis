@@ -1,25 +1,28 @@
 package database
 
 import (
-	"Godis/interface/resp"
-	"Godis/resp/reply"
+	"godis/interface/resp"
+	"godis/lib/logger"
+	"godis/resp/reply"
 )
 
-type echodatabase struct {
+type EchoDatabase struct {
 }
 
-func NewEchodatabase() *echodatabase {
-	return &echodatabase{}
+func NewEchoDatabase() *EchoDatabase {
+	return &EchoDatabase{}
 }
 
-func (e echodatabase) Exec(client resp.Connection, args [][]byte) resp.Reply {
-	return reply.NewMultiBulkReply(args)
-}
-
-func (e echodatabase) Close() {
+func (e EchoDatabase) Exec(client resp.Connection, args [][]byte) resp.Reply {
+	return reply.MakeMultiBulkReply(args)
 
 }
 
-func (e echodatabase) AfterClientClose() {
+func (e EchoDatabase) AfterClientClose(c resp.Connection) {
+	logger.Info("EchoDatabase AfterClientClose")
+}
+
+func (e EchoDatabase) Close() {
+	logger.Info("EchoDatabase Close")
 
 }

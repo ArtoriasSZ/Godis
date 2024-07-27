@@ -1,8 +1,8 @@
 package config
 
 import (
-	"Godis/lib/logger"
 	"bufio"
+	"godis/lib/logger"
 	"io"
 	"os"
 	"reflect"

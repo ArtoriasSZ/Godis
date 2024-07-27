@@ -1,8 +1,8 @@
 package reply
 
 import (
-	"Godis/interface/resp"
 	"bytes"
+	"godis/interface/resp"
 	"strconv"
 )
 
@@ -13,109 +13,101 @@ var (
 	CRLF = "\r\n"
 )
 
-/* ---- 字符串回复 ---- */
+/* ---- Bulk Reply ---- */
 
-// bulk 大量，主体
+// BulkReply stores a binary-safe string
 type BulkReply struct {
 	Arg []byte
 }
 
-// NewBulkReply creates  BulkReply
-func NewBulkReply(arg []byte) *BulkReply {
+// MakeBulkReply creates  BulkReply
+func MakeBulkReply(arg []byte) *BulkReply {
 	return &BulkReply{
 		Arg: arg,
 	}
 }
 
-// "moody"$5\r\nmoody\r\n""
-func (r *BulkReply) ToBytes() ([]byte, error) {
+// ToBytes marshal redis.Reply
+func (r *BulkReply) ToBytes() []byte {
 	if len(r.Arg) == 0 {
-		return nullBulkReplyBytes, nil
+		return nullBulkReplyBytes
 	}
-	return []byte("$" + strconv.Itoa(len(r.Arg)) + CRLF + string(r.Arg) + CRLF), nil
+	return []byte("$" + strconv.Itoa(len(r.Arg)) + CRLF + string(r.Arg) + CRLF)
 }
 
-/* ---- 字符串数组回复 ---- */
+/* ---- Multi Bulk Reply ---- */
 
+// MultiBulkReply stores a list of string
 type MultiBulkReply struct {
 	Args [][]byte
 }
 
-// NewMultiBulkReply creates MultiBulkReply
-func NewMultiBulkReply(args [][]byte) *MultiBulkReply {
+// MakeMultiBulkReply creates MultiBulkReply
+func MakeMultiBulkReply(args [][]byte) *MultiBulkReply {
 	return &MultiBulkReply{
 		Args: args,
 	}
 }
 
 // ToBytes marshal redis.Reply
-func (r *MultiBulkReply) ToBytes() ([]byte, error) {
+func (r *MultiBulkReply) ToBytes() []byte {
 	argLen := len(r.Args)
 	var buf bytes.Buffer
-	_, err := buf.WriteString("*" + strconv.Itoa(argLen) + CRLF)
-	// 缓冲区溢出报错
-	if err != nil {
-		return nil, err
-	}
+	buf.WriteString("*" + strconv.Itoa(argLen) + CRLF)
 	for _, arg := range r.Args {
 		if arg == nil {
-			_, err = buf.WriteString("$-1" + CRLF)
-			if err != nil {
-				return nil, err
-			}
+			buf.WriteString("$-1" + CRLF)
 		} else {
-			_, err = buf.WriteString("$" + strconv.Itoa(len(arg)) + CRLF + string(arg) + CRLF)
-			if err != nil {
-				return nil, err
-			}
+			buf.WriteString("$" + strconv.Itoa(len(arg)) + CRLF + string(arg) + CRLF)
 		}
 	}
-	return buf.Bytes(), nil
+	return buf.Bytes()
 }
 
-/* ---- 状态回复 ---- */
+/* ---- Status Reply ---- */
 
+// StatusReply stores a simple status string
 type StatusReply struct {
 	Status string
 }
 
-// NewStatusReply creates StatusReply
-func NewStatusReply(status string) *StatusReply {
+// MakeStatusReply creates StatusReply
+func MakeStatusReply(status string) *StatusReply {
 	return &StatusReply{
 		Status: status,
 	}
 }
 
 // ToBytes marshal redis.Reply
-func (r *StatusReply) ToBytes() ([]byte, error) {
-	return []byte("+" + r.Status + CRLF), nil
+func (r *StatusReply) ToBytes() []byte {
+	return []byte("+" + r.Status + CRLF)
 }
 
-/* ---- 数字回复 ---- */
+/* ---- Int Reply ---- */
 
 // IntReply stores an int64 number
 type IntReply struct {
 	Code int64
 }
 
-// NewIntReply creates int reply
-func NewIntReply(code int64) *IntReply {
+// MakeIntReply creates int reply
+func MakeIntReply(code int64) *IntReply {
 	return &IntReply{
 		Code: code,
 	}
 }
 
 // ToBytes marshal redis.Reply
-func (r *IntReply) ToBytes() ([]byte, error) {
-	return []byte(":" + strconv.FormatInt(r.Code, 10) + CRLF), nil
+func (r *IntReply) ToBytes() []byte {
+	return []byte(":" + strconv.FormatInt(r.Code, 10) + CRLF)
 }
 
-/* ---- 错误回复 ---- */
+/* ---- Error Reply ---- */
 
 // ErrorReply is an error and redis.Reply
 type ErrorReply interface {
 	Error() string
-	ToBytes() ([]byte, error)
+	ToBytes() []byte
 }
 
 // StandardErrReply represents handler error
@@ -124,26 +116,22 @@ type StandardErrReply struct {
 }
 
 // ToBytes marshal redis.Reply
-func (r *StandardErrReply) ToBytes() ([]byte, error) {
-	return []byte("-" + r.Status + CRLF), nil
+func (r *StandardErrReply) ToBytes() []byte {
+	return []byte("-" + r.Status + CRLF)
 }
 
 func (r *StandardErrReply) Error() string {
 	return r.Status
 }
 
-// NewErrReply creates StandardErrReply
-func NewErrReply(status string) *StandardErrReply {
+// MakeErrReply creates StandardErrReply
+func MakeErrReply(status string) *StandardErrReply {
 	return &StandardErrReply{
 		Status: status,
 	}
 }
 
 // IsErrorReply returns true if the given reply is error
-func IsErrorReply(reply resp.Reply) (bool, error) {
-	toBytes, err := reply.ToBytes()
-	if err != nil {
-		return false, err
-	}
-	return toBytes[0] == '-', nil
+func IsErrorReply(reply resp.Reply) bool {
+	return reply.ToBytes()[0] == '-'
 }

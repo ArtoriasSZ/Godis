@@ -1,8 +1,8 @@
 package test
 
 import (
-	"Godis/resp/parser"
 	"fmt"
+	"godis/resp/parser"
 	"io"
 	"os"
 	"testing"
@@ -46,7 +46,16 @@ func TestParser0(t *testing.T) {
 	// Wait for the payload from the channel
 
 	receivedPayload := <-ch
-	fmt.Println(receivedPayload.Date)
+	fmt.Println(receivedPayload.Data)
 	fmt.Println(receivedPayload.Err)
 	time.Sleep(100 * time.Second)
+}
+
+func TestSeach(t *testing.T) {
+	// Mock data for testing
+	a := make([]int, 0, 10)
+	fmt.Println(len(a), cap(a), a)
+	a[0] = 1
+	fmt.Println(len(a), cap(a), a)
+
 }

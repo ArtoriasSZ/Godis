@@ -10,11 +10,6 @@ type Wait struct {
 	wg sync.WaitGroup
 }
 
-// New adds delta, which may be negative, to the WaitGroup counter.
-func (w *Wait) NewWait(delta int) {
-	w.wg.Add(delta)
-}
-
 // Add adds delta, which may be negative, to the WaitGroup counter.
 func (w *Wait) Add(delta int) {
 	w.wg.Add(delta)
@@ -41,7 +36,6 @@ func (w *Wait) WaitWithTimeout(timeout time.Duration) bool {
 	}()
 	select {
 	case <-c:
-		// 所有协程执行完毕，没有超时
 		return false // completed normally
 	case <-time.After(timeout):
 		return true // timed out
